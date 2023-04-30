@@ -1,10 +1,10 @@
 import calendar
 from datetime import datetime, timedelta
-import emoji
+from typing import Union
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import CallbackQuery
-from calendar_types import (
+from workouts_calendar.calendar_types import (
     SimpleCalendarCallback,
     SimpleCalendarAction,
     WEEKDAYS
@@ -19,11 +19,10 @@ class SimpleCalendar:
             year: int = datetime.now().year,
             month: int = datetime.now().month
     ) -> InlineKeyboardMarkup:
-        workout_days = []
+        workout_dates = []
         for d in users[user_id]:
             date = ''.join(list(d.keys()))
-            workout_days.append(int(date[0:date.find('/')]))
-        # print(workout_days)
+            workout_dates.append(date)
         markup = []
         ignore_callback = SimpleCalendarCallback(
             act=SimpleCalendarAction.IGNORE,
@@ -72,9 +71,10 @@ class SimpleCalendar:
                         callback_data=ignore_callback.pack())
                         )
                     continue
-                if day in workout_days:
+                current_date = f'{day}/{month}/{year}'
+                if current_date in workout_dates:
                     calendar_row.append(InlineKeyboardButton(
-                        text='💪🏻', #emoji.emojize(':flexed_biceps_light_skin_tone:'),
+                        text='💪🏻',
                         callback_data=SimpleCalendarCallback(
                             act=SimpleCalendarAction.DAY,
                             year=year,
@@ -102,8 +102,8 @@ class SimpleCalendar:
                         day=day).pack()
                 ),
                 InlineKeyboardButton(
-                    text=" ",
-                    callback_data=ignore_callback.pack()),
+                    text="Назад",
+                    callback_data='start'),
                 InlineKeyboardButton(
                     text=">",
                     callback_data=SimpleCalendarCallback(
@@ -121,14 +121,13 @@ class SimpleCalendar:
     async def process_selection(
             self,
             query: CallbackQuery,
-            data: [CallbackData, SimpleCalendarCallback]
+            data: Union[CallbackData, SimpleCalendarCallback],
+            user_id: int
             ) -> tuple:
         return_data = (False, None)
         temp_date = datetime(int(data.year), int(data.month), 1)
-        # processing empty buttons, answering with no action
         if data.act == SimpleCalendarAction.IGNORE:
             await query.answer(cache_time=60)
-        # user picked a day button, return date
         if data.act == SimpleCalendarAction.DAY:
             await query.message.delete_reply_markup()
             return_data = True, datetime(
@@ -136,38 +135,36 @@ class SimpleCalendar:
                 int(data.month),
                 data.day
                 )
-        # user navigates to previous year, editing message with new calendar
         if data.act == SimpleCalendarAction.PREV_YEAR:
             prev_date = datetime(int(data.year) - 1, int(data.month), 1)
             markup = await self.start_calendar(
-                int(prev_date.year),
-                int(prev_date.month),
-                user_id=682315225
+                user_id=user_id,
+                year=int(prev_date.year),
+                month=int(prev_date.month),
                 )
             await query.message.edit_reply_markup(reply_markup=markup)
-        # user navigates to next year, editing message with new calendar
         if data.act == SimpleCalendarAction.NEXT_YEAR:
             next_date = datetime(int(data.year) + 1, int(data.month), 1)
             markup = await self.start_calendar(
-                int(next_date.year),
-                int(next_date.month)
+                user_id=user_id,
+                year=int(next_date.year),
+                month=int(next_date.month),
                 )
             await query.message.edit_reply_markup(reply_markup=markup)
-        # user navigates to previous month, editing message with new calendar
         if data.act == SimpleCalendarAction.PREV_MONTH:
             prev_date = temp_date - timedelta(days=1)
             markup = await self.start_calendar(
-                int(prev_date.year),
-                int(prev_date.month)
+                user_id=user_id,
+                year=int(prev_date.year),
+                month=int(prev_date.month),
                 )
             await query.message.edit_reply_markup(reply_markup=markup)
-        # user navigates to next month, editing message with new calendar
         if data.act == SimpleCalendarAction.NEXT_MONTH:
             next_date = temp_date + timedelta(days=31)
             markup = await self.start_calendar(
-                int(next_date.year),
-                int(next_date.month)
+                user_id=user_id,
+                year=int(next_date.year),
+                month=int(next_date.month),
                 )
             await query.message.edit_reply_markup(reply_markup=markup)
-        # at some point user clicks DAY button, returning date
         return return_data
