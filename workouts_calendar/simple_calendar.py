@@ -9,7 +9,7 @@ from workouts_calendar.calendar_types import (
     SimpleCalendarAction,
     WEEKDAYS
     )
-from database import users
+from database import session, User
 
 
 class SimpleCalendar:
@@ -19,10 +19,8 @@ class SimpleCalendar:
             year: int = datetime.now().year,
             month: int = datetime.now().month
     ) -> InlineKeyboardMarkup:
-        workout_dates = []
-        for d in users[user_id]:
-            date = ''.join(list(d.keys()))
-            workout_dates.append(date)
+        user = session.query(User).filter(User.id.ilike(user_id)).first()
+        workout_dates = [workout.date if workout.date is not None else '' for workout in user.workouts]
         markup = []
         ignore_callback = SimpleCalendarCallback(
             act=SimpleCalendarAction.IGNORE,
@@ -74,7 +72,7 @@ class SimpleCalendar:
                 current_date = f'{day}/{month}/{year}'
                 if current_date in workout_dates:
                     calendar_row.append(InlineKeyboardButton(
-                        text='💪🏻',
+                        text='🏆',
                         callback_data=SimpleCalendarCallback(
                             act=SimpleCalendarAction.DAY,
                             year=year,

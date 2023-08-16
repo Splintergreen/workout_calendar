@@ -151,3 +151,4 @@ dmypy.json
 /venv
 /main.py
 /old
+*.db

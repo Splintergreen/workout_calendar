@@ -6,8 +6,8 @@ from workouts_calendar import SimpleCalendar
 from workouts_calendar import SimpleCalendarCallback
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
-from pprint import pprint
-from database import users, workout_names
+from database import User, session, Workout
+from sqlalchemy import literal
 from keyboards import (
     start_keyboard,
     workut_type_keyboard,
@@ -15,16 +15,11 @@ from keyboards import (
     another_workup,
     main_menu,
     deletion_confirm,
-    back_to_month_workouts
+    back_to_month_workouts,
+    edit_workout_keyboard
 )
-from lexicon import command_text
-from utils import (
-    get_workout_dates,
-    get_workout_data,
-    add_workout_data,
-    delete_current_and_previous_message
-    )
-
+from lexicon import command_text, workout_names
+from utils import delete_current_and_previous_message
 
 router: Router = Router()
 
@@ -33,16 +28,20 @@ class FSMWorkout(StatesGroup):
     date = State()
     workout_type = State()
     approaches_num = State()
+    repetitions_num = State()
+    weight = State()
     comment = State()
-
-
-selected_workout_date = ''
 
 
 @router.message(CommandStart(), StateFilter(default_state))
 async def start_command(message: Message):
-    if message.from_user.id not in users:
-        users[message.from_user.id] = []
+    user_id_find = session.query(User).filter(User.id == message.from_user.id)
+    user_exist_check = session.query(
+        literal(True)
+        ).filter(user_id_find.exists()).scalar()
+    if user_exist_check is None:
+        session.add(User(id=message.from_user.id))
+        session.commit()
     text = command_text.get('/start')(message.from_user.full_name)
     await message.delete()
     await message.answer(text, reply_markup=start_keyboard())
@@ -65,10 +64,26 @@ async def add_workout_call(call: CallbackQuery, state: FSMContext):
     await state.set_state(FSMWorkout.date)
 
 
-@router.callback_query(Text(text=['end_workout']))
-async def end_workout_call(call: CallbackQuery):
-    text = command_text.get('/end_workout')  # допилить клавиатуру
-    await call.message.answer(text)
+@router.callback_query(Text(text=['edit_workout']))
+async def edit_workout_call(call: CallbackQuery):
+    user_id = call.from_user.id
+    user = session.query(User).filter(User.id.ilike(user_id)).first()
+    selected_date = user.selected_date
+    this_date_workouts = session.query(Workout).filter(Workout.date.ilike(selected_date)).all()
+    workout_types = [w.workout_type for w in this_date_workouts]
+    text = f'Тренировки за {selected_date}.\nВыберите какую редактировать:'
+    await call.message.answer(text, reply_markup=edit_workout_keyboard(workout_types))
+
+
+@router.callback_query(Text(startswith=['call_edit_']))
+async def edit_selected_workout_call(call: CallbackQuery):
+    user_id = call.from_user.id
+    user = session.query(User).filter(User.id.ilike(user_id)).first()
+    selected_date = user.selected_date
+    workout_name = call.data[10:]
+    print(workout_name)
+
+
 
 
 @router.callback_query(Text(text=['delete_workout']))
@@ -79,11 +94,13 @@ async def delete_workout_call(call: CallbackQuery):
 @router.callback_query(Text(text=['delete_yes']))
 async def delete_yes_call(call: CallbackQuery):
     user_id = call.from_user.id
-    selected_date = selected_workout_date
-    workout_dates = users[user_id]
-    for index, date in enumerate(workout_dates):
-        if ''.join(list(date.keys())) == selected_date:
-            workout_dates.pop(index)
+    user = session.query(User).filter(User.id.ilike(user_id)).first()
+    selected_date = user.selected_date
+    session.query(Workout).filter(
+            Workout.user_id.ilike(user_id),
+            Workout.date.ilike(selected_date)
+        ).delete(synchronize_session='fetch')
+    session.commit()
     await call.message.edit_text(
         'Тренировка удалена!',
         reply_markup=back_to_month_workouts
@@ -103,8 +120,7 @@ async def delete_no_call(call: CallbackQuery):
     )
 async def show_month_workout_call(call: CallbackQuery, state: FSMContext):
     user_id = call.from_user.id
-    month_count = 10  # дописать счетчик тренировок за месяц
-    text = command_text.get('/month_workouts')(month_count)
+    text = command_text.get('/month_workouts')
     await call.message.edit_text(
         text,
         reply_markup=await SimpleCalendar().start_calendar(user_id)
@@ -122,7 +138,9 @@ async def help_command_call(call: CallbackQuery, state: FSMContext):
 @router.callback_query(Text(text=['stat']), StateFilter(default_state))
 async def stat_call(call: CallbackQuery, state: FSMContext):
     user_id = call.from_user.id
-    workout_days_total = len(users[user_id])
+    user = session.query(User).filter(User.id.ilike(user_id)).first()
+    dates = set([workout.date for workout in user.workouts])
+    workout_days_total = len(dates)
     await state.clear()
     text = command_text.get('/stat')(workout_days_total)
     await call.message.edit_text(text, reply_markup=main_menu)
@@ -143,24 +161,23 @@ async def process_simple_calendar(
     if selected:
         selected_date = f'{date.strftime("%-d/%-m/%Y")}'
         user_id = callback_query.from_user.id
-        dates = get_workout_dates(user_id)
+        user = session.query(User).filter(User.id.ilike(user_id)).first()
+        user.selected_date = selected_date
+        session.commit()
+        dates = [workout.date for workout in user.workouts]
         text = callback_query.message.text
-        if selected_date in dates and 'тренировок в этом месяце' in text:
+        if selected_date in dates and '🏆' in text:
             await state.clear()
-            global selected_workout_date  # временный костыль пока нет БД
-            selected_workout_date = selected_date
-            workouts = get_workout_data(user_id, selected_date)
             text = f'Ваши тренировки за {selected_date}'
-            for workout in workouts:
-                for type, info in workout.items():
-                    num = info['approaches_num']
-                    comment = info['comment']
-                    workout_name = workout_names[type]
+
+            for workout in user.workouts:
+                if workout.date == selected_date:
                     text += (
-                        f'\n{workout_name}:\n'
-                        f'Количество подходов - {num}\n'
-                        f'Комментарий: {comment}'
-                        )
+                            f'\n{workout.workout_type}:\n'
+                            f'Количество подходов - {workout.approaches_num}\n'
+                            f'{workout.repetitions_num} повторения, вес - {workout.weight}\n'
+                            f'Комментарий: {workout.comment}'
+                            )
             markup = stat_keyboard()
         else:
             await state.update_data(date=selected_date)
@@ -176,7 +193,7 @@ async def process_simple_calendar(
 
 @router.callback_query(StateFilter(FSMWorkout.workout_type))
 async def workout_call(call: CallbackQuery, state: FSMContext):
-    await state.update_data(workout_type=call.data)
+    await state.update_data(workout_type=workout_names[call.data])
     await call.message.edit_text(
         'Укажите количество подходов:',
         reply_markup=main_menu
@@ -193,10 +210,10 @@ async def approaches_num_callback(message: Message, state: FSMContext):
     await state.update_data(approaches_num=message.text)
     await delete_current_and_previous_message(message)
     await message.answer(
-        'Укажите комментарий к тренировке:',
+        'Укажите количество повторений:',
         reply_markup=main_menu
         )
-    await state.set_state(FSMWorkout.comment)
+    await state.set_state(FSMWorkout.repetitions_num)
 
 
 @router.message(StateFilter(FSMWorkout.approaches_num))
@@ -205,15 +222,65 @@ async def wrong_approaches_num_callback(message: Message):
     await message.answer('Укажите ЧИСЛО подходов!')
 
 
+@router.message(
+        StateFilter(FSMWorkout.repetitions_num),
+        lambda x: x.text.isdigit() and 0 <= int(x.text) <= 200
+        )
+async def repetitions_num_callback(message: Message, state: FSMContext):
+    await state.update_data(repetitions_num=message.text)
+    await delete_current_and_previous_message(message)
+    await message.answer(
+        'Укажите с каким весом выполнялись повторения:',
+        reply_markup=main_menu
+        )
+    await state.set_state(FSMWorkout.weight)
+
+
+@router.message(StateFilter(FSMWorkout.repetitions_num))
+async def wrong_repetitions_num_callback(message: Message):
+    await delete_current_and_previous_message(message)
+    await message.answer('Укажите ЧИСЛО повторений!')
+
+
+@router.message(
+        StateFilter(FSMWorkout.weight),
+        lambda x: x.text.replace('.', '', 1).isdigit() or x.text.replace(',', '', 1).isdigit() and 0 <= float(x.text.replace(',', '.', 1)) <= 200
+        )
+async def weight_num_callback(message: Message, state: FSMContext):
+    await state.update_data(weight=message.text.replace(',', '.', 1))
+    await delete_current_and_previous_message(message)
+    await message.answer(
+        'Укажите комментарий к тренировке:',
+        reply_markup=main_menu
+        )
+    await state.set_state(FSMWorkout.comment)
+
+
+@router.message(StateFilter(FSMWorkout.weight))
+async def wrong_weight_num_callback(message: Message):
+    await delete_current_and_previous_message(message)
+    await message.answer('Укажите вес ЧИСЛОМ!')
+
+
 @router.message(StateFilter(FSMWorkout.comment))
 async def comment_callback(message: Message, state: FSMContext):
     await state.update_data(comment=message.text)
     workout_state = await state.get_data()
     user_id = message.from_user.id
-    add_workout_data(workout_state, user_id)
+    session.add(
+        Workout(
+            user_id=user_id,
+            workout_type=workout_state['workout_type'],
+            approaches_num=workout_state['approaches_num'],
+            repetitions_num=workout_state['repetitions_num'],
+            weight=workout_state['weight'],
+            comment=workout_state['comment'],
+            date=workout_state['date']
+        ))
+    session.commit()
+
     await delete_current_and_previous_message(message)
     await state.clear()
-    pprint(users)
     await message.answer(
         'Тренировка добавлена!',
         reply_markup=another_workup()
