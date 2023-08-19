@@ -28,6 +28,7 @@ workout_names = {
     'latissimus': 'Широчайшие',
     'triceps': 'Трицепсы',
     'forearm': 'Предплечья',
+    'trapezius': 'Трапеция',
     'shoulders': 'Плечи',
     'abs': 'Пресс',
     'hip_flexers': 'Бедра',

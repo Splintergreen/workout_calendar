@@ -45,24 +45,24 @@ def workut_type_keyboard():
 
 def stat_keyboard():
     stat_button_1: InlineKeyboardButton = InlineKeyboardButton(
-        text='Удалить',
-        callback_data='delete_workout')
+        text='Добавить тренировку',
+        callback_data='add_workout')
     stat_button_2: InlineKeyboardButton = InlineKeyboardButton(
         text='Редактировать',
         callback_data='edit_workout')
     stat_button_3: InlineKeyboardButton = InlineKeyboardButton(
+        text='Удалить',
+        callback_data='delete_workout')
+    stat_button_4: InlineKeyboardButton = InlineKeyboardButton(
         text='Назад',
         callback_data='month_workouts')
-    # stat_button_4: InlineKeyboardButton = InlineKeyboardButton(
-    #     text='Закрыть',
-    #     callback_data='end_workout')
 
     stat_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(
         inline_keyboard=[
             [stat_button_1],
             [stat_button_2],
             [stat_button_3],
-            # [stat_button_4],
+            [stat_button_4],
 
         ]
     )
