@@ -1,4 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from lexicon import workout_names
 
 
@@ -30,17 +31,15 @@ def start_keyboard():
     return keybord
 
 
-def workut_type_keyboard():
+def workout_type_keyboard():
     buttons = [
-        [InlineKeyboardButton(text=name, callback_data=workout)]
+        InlineKeyboardButton(text=name, callback_data=workout)
         for workout, name in workout_names.items()
         ]
-    buttons.append([InlineKeyboardButton(text='Назад', callback_data='start')])
-    workut_type_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(
-        inline_keyboard=buttons
-
-    )
-    return workut_type_keyboard
+    buttons.append(InlineKeyboardButton(text='Назад', callback_data='start'))
+    kb_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
+    kb_builder.row(*buttons, width=2)
+    return kb_builder.as_markup()
 
 
 def stat_keyboard():

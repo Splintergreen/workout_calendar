@@ -10,7 +10,7 @@ from database import User, session, Workout
 from sqlalchemy import literal
 from keyboards import (
     start_keyboard,
-    workut_type_keyboard,
+    workout_type_keyboard,
     stat_keyboard,
     another_workup,
     main_menu,
@@ -181,7 +181,7 @@ async def process_simple_calendar(
             markup = stat_keyboard()
         else:
             await state.update_data(date=selected_date)
-            markup = workut_type_keyboard()
+            markup = workout_type_keyboard()
             text = 'Укажите тип тренировки:'
             await state.set_state(FSMWorkout.workout_type)
         await callback_query.message.edit_text(
