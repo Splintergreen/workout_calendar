@@ -24,6 +24,18 @@ class Workout(Base):
     weight = Column(Integer)
     comment = Column(String)
     date = Column(String)
+    cardio = relationship('Cardio')
+
+
+class Cardio(Base):
+    __tablename__ = 'cardio'
+
+    id = Column(Integer, primary_key=True)
+    workout_id = Column(Integer, ForeignKey('workouts.id'))
+    cardio_type = Column(String)
+    cardio_duration = Column(String)
+    cardio_level = Column(String)
+    cardio_pulce = Column(String)
 
 
 Base.metadata.create_all(engine)

@@ -4,8 +4,12 @@ from lexicon import workout_names
 
 
 def start_keyboard():
+    button_0: InlineKeyboardButton = InlineKeyboardButton(
+        text='Добавить тренировку(сегодня)',
+        callback_data='add_workout_now'
+    )
     button_1: InlineKeyboardButton = InlineKeyboardButton(
-        text='Добавить тренировку',
+        text='Добавить тренировку(выбор даты)',
         callback_data='add_workout'
     )
     button_2: InlineKeyboardButton = InlineKeyboardButton(
@@ -22,6 +26,7 @@ def start_keyboard():
     )
     keybord: InlineKeyboardMarkup = InlineKeyboardMarkup(
         inline_keyboard=[
+            [button_0],
             [button_1],
             [button_2],
             [button_3],
@@ -43,8 +48,11 @@ def workout_type_keyboard():
 
 
 def stat_keyboard():
+    stat_button_0: InlineKeyboardButton = InlineKeyboardButton(
+        text='Добавить тренировку(сегодня)',
+        callback_data='add_workout_now')
     stat_button_1: InlineKeyboardButton = InlineKeyboardButton(
-        text='Добавить тренировку',
+        text='Добавить тренировку(выбор даты)',
         callback_data='add_workout')
     stat_button_2: InlineKeyboardButton = InlineKeyboardButton(
         text='Редактировать',
@@ -58,6 +66,7 @@ def stat_keyboard():
 
     stat_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(
         inline_keyboard=[
+            [stat_button_0],
             [stat_button_1],
             [stat_button_2],
             [stat_button_3],
@@ -69,8 +78,11 @@ def stat_keyboard():
 
 
 def another_workup():
+    button_0: InlineKeyboardButton = InlineKeyboardButton(
+        text='Добавить другую тренировку(сегодня)?',
+        callback_data='add_workout_now')
     button_1: InlineKeyboardButton = InlineKeyboardButton(
-        text='Добавить другую тренировку?',
+        text='Добавить другую тренировку(выбор даты)?',
         callback_data='add_workout')
     button_2: InlineKeyboardButton = InlineKeyboardButton(
         text='Показать тренировки за месяц',
@@ -80,6 +92,7 @@ def another_workup():
         callback_data='start')
     another_workup_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(
         inline_keyboard=[
+            [button_0],
             [button_1],
             [button_2],
             [button_3],
@@ -119,3 +132,41 @@ def edit_workout_keyboard(workouts):
 
     )
     return edit_workout_keyboard
+
+
+def cardio_keyboard():
+    button_0: InlineKeyboardButton = InlineKeyboardButton(
+        text='Жиросжигание(FatBurn)',
+        callback_data='cardio_fat_burn'
+    )
+    button_1: InlineKeyboardButton = InlineKeyboardButton(
+        text='Кардио(Cardio)',
+        callback_data='cardio_cardio'
+    )
+    button_2: InlineKeyboardButton = InlineKeyboardButton(
+        text='Подъем(Hill)',
+        callback_data='cardio_hill'
+    )
+    button_3: InlineKeyboardButton = InlineKeyboardButton(
+        text='Произвольная(Random)',
+        callback_data='cardio_random'
+    )
+    button_4: InlineKeyboardButton = InlineKeyboardButton(
+        text='На одной скорости',
+        callback_data='cardio_one_speed'
+    )
+    button_5: InlineKeyboardButton = InlineKeyboardButton(
+        text='Назад',
+        callback_data='start'
+    )
+    keybord: InlineKeyboardMarkup = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [button_0],
+            [button_1],
+            [button_2],
+            [button_3],
+            [button_4],
+            [button_5]
+        ]
+    )
+    return keybord

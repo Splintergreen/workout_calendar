@@ -34,5 +34,15 @@ workout_names = {
     'hip_flexers': 'Бедра',
     'calf_muscles': 'Икры',
     'gluteal': 'Ягодицы',
+    'warmup': 'Разминка',
+    'cardio': 'Кардио',
     'other': 'Другое',
+}
+
+cardio_names = {
+    'cardio_fat_burn': 'Жиросжигание(FatBurn)',
+    'cardio_cardio': 'Кардио(Cardio)',
+    'cardio_hill': 'Подъем(Hill)',
+    'cardio_random': 'Произвольная(Random)',
+    'cardio_one_speed': 'На одной скорости',
 }
