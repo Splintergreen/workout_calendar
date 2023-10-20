@@ -239,6 +239,7 @@ async def process_simple_calendar(
 @router.callback_query(StateFilter(FSMWorkout.workout_type))
 async def workout_call(call: CallbackQuery, state: FSMContext):
     await state.update_data(workout_type=workout_names[call.data])
+    print(call.data)
     if call.data == 'cardio':
         await call.message.edit_text(
             'Укажите тип тренировки:',
@@ -246,7 +247,7 @@ async def workout_call(call: CallbackQuery, state: FSMContext):
             )
         await call.answer()
         await state.set_state(FSMWorkout.cardio_type)
-    if call.data == 'warmup':
+    elif call.data == 'warmup':
         await call.message.edit_text(
             'Укажите тип разминки:',
             reply_markup=main_menu
